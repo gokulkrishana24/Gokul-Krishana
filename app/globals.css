@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Deep midnight environment + soft blue atmosphere + warm yellow light + controlled red accents */
+  --navy: #070a10;
+  --navy-soft: #0d121a;
+  --baby: #8ecbf2;
+  --baby-deep: #5baee0;
+  --sun: #ffd34d;
+  --red: #ff5c5c;
+  --offwhite: #f4f6f8;
+  --muted: #9da9b7;
+}
+
+html {
+  scroll-behavior: auto; /* Lenis owns smoothing */
+}
+
+body {
+  background: var(--navy);
+  color: var(--offwhite);
+  font-family: var(--font-body), system-ui, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ------------------------------------------------------------------ */
+/* Typography helpers                                                 */
+/* ------------------------------------------------------------------ */
+
+.headline {
+  font-family: var(--font-display), system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.kicker {
+  font-family: var(--font-display), system-ui, sans-serif;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+}
+
+.text-outline {
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(142, 203, 255, 0.28);
+}
+
+/* ------------------------------------------------------------------ */
+/* Surfaces                                                           */
+/* ------------------------------------------------------------------ */
+
+.glass {
+  background: linear-gradient(160deg, rgba(13, 18, 26, 0.72), rgba(7, 10, 16, 0.58));
+  border: 1px solid rgba(142, 203, 242, 0.14);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.hairline {
+  border-color: rgba(142, 203, 242, 0.14);
+}
+
+/* ------------------------------------------------------------------ */
+/* Hero portrait atmosphere (thin interface lines + digital grid)     */
+/* ------------------------------------------------------------------ */
+
+.digital-grid {
+  background-image:
+    linear-gradient(rgba(142, 203, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(142, 203, 255, 0.07) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.hero-glow {
+  background:
+    radial-gradient(ellipse 60% 48% at 72% 38%, rgba(91, 174, 224, 0.16), transparent 68%),
+    radial-gradient(ellipse 44% 40% at 22% 70%, rgba(255, 92, 92, 0.07), transparent 70%),
+    radial-gradient(ellipse 40% 36% at 60% 82%, rgba(255, 211, 77, 0.05), transparent 70%);
+}
+
+/* Atmosphere layer for background video — keeps footage subtle and readable */
+.video-atmosphere {
+  background:
+    linear-gradient(to bottom, rgba(7, 10, 16, 0.82), rgba(7, 10, 16, 0.62) 45%, rgba(7, 10, 16, 0.9)),
+    radial-gradient(ellipse 70% 60% at 50% 50%, transparent 30%, rgba(7, 10, 16, 0.7) 100%);
+}
+
+/* ------------------------------------------------------------------ */
+/* Thin scrollbar                                                     */
+/* ------------------------------------------------------------------ */
+
+::-webkit-scrollbar {
+  width: 9px;
+}
+::-webkit-scrollbar-track {
+  background: #05070d;
+}
+::-webkit-scrollbar-thumb {
+  background: #1a2432;
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2a3c50;
+}
+
+::selection {
+  background: rgba(142, 203, 242, 0.32);
+  color: #ffffff;
+}
+
+/* ------------------------------------------------------------------ */
+/* Accessibility                                                      */
+/* ------------------------------------------------------------------ */
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--baby);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
