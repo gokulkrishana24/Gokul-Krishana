@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { useRef, useState } from 'react';
-import { beyond, domeGallery, mindset } from '@/data/content';
+import { beyond, domeGallery, mindset, profile } from '@/data/content';
 import { useReducedMotion } from '@/lib/useIsTouch';
 import { Reveal } from './About';
 
@@ -225,8 +225,13 @@ export function DomeGallery() {
         </Reveal>
         <Reveal delay={0.08}>
           <h2 className="headline mt-4 text-center text-3xl font-bold text-white md:text-5xl">
-            MOMENTS OF THE <span className="text-baby">JOURNEY</span>
+            MOMENT OF <span className="text-baby">JOY</span>
           </h2>
+        </Reveal>
+        <Reveal delay={0.12}>
+          <p className="mx-auto mt-4 max-w-lg text-center text-sm leading-relaxed text-muted">
+            The parts that never made it into a project description — stages, corridors, first days.
+          </p>
         </Reveal>
       </div>
 
@@ -277,6 +282,31 @@ export function DomeGallery() {
           {reduced ? 'GALLERY' : 'MOVE YOUR CURSOR · OR DRAG TO ROTATE'}
         </p>
       </div>
+
+      {/* Instagram is linked out to, never scraped. No token is ever
+          shipped to the browser and no third-party script is embedded;
+          without a server-side integration the gallery above stays the
+          honest, self-hosted fallback. */}
+      <Reveal delay={0.1}>
+        <div className="mx-auto mt-16 flex max-w-2xl flex-col items-center gap-5 px-5 text-center md:px-10">
+          <p className="kicker text-[9px] text-baby-dim">MORE, OFF-PLATFORM</p>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            {[profile.instagram, profile.instagramAlt].map((href, i) => (
+              <a
+                key={href}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-cursor="EXPLORE"
+                className="inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 font-display text-[10px] font-bold tracking-[0.18em] text-slate-200 transition-all duration-300 hover:border-baby hover:text-baby"
+              >
+                {i === 0 ? 'INSTAGRAM' : 'INSTAGRAM · ALT'}
+                <span aria-hidden="true" className="transition-transform duration-300 hover:translate-x-0.5">→</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </Reveal>
     </section>
   );
 }

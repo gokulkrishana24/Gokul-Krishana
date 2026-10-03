@@ -26,8 +26,9 @@ const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://gokulkrishana.ver
  *   • media-src   — self only; all footage is served from /public.
  *   • connect-src — self only. Nothing is fetched from a third party
  *     at runtime: fonts are self-hosted by next/font at build time.
- *   • frame-src   — 'none'. The portfolio embeds nothing, and it must
- *     not be embeddable (see frame-ancestors).
+ *   • frame-src   — 'self' only, and only because the resume viewer
+ *     frames the self-hosted PDF. Nothing third-party can be framed.
+ *   • object-src — 'self', same reason: the PDF plugin document.
  */
 const csp = [
   "default-src 'self'",
@@ -41,8 +42,8 @@ const csp = [
   "font-src 'self' data:",
   "media-src 'self' blob:",
   "connect-src 'self'",
-  "frame-src 'none'",
-  "object-src 'none'",
+  "frame-src 'self'",
+  "object-src 'self'",
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",

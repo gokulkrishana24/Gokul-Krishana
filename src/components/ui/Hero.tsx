@@ -2,11 +2,11 @@
 
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { profile } from '@/data/content';
+import { about, profile } from '@/data/content';
 import { useScrollTo } from '@/lib/lenis';
 import { useReducedMotion } from '@/lib/useIsTouch';
 import { BackgroundVideo } from './BackgroundVideo';
-import { useResumeDownload } from './ResumeCinematic';
+import type { useResumeViewer } from './ResumeViewer';
 
 /**
  * HERO — full-screen cinematic opening. Giant name typography beside
@@ -18,7 +18,7 @@ import { useResumeDownload } from './ResumeCinematic';
 const MAX_RX = 3; // deg — never more, face must stay stable
 const MAX_RY = 5; // deg
 
-export function Hero({ resume }: { resume: ReturnType<typeof useResumeDownload> }) {
+export function Hero({ resume }: { resume: ReturnType<typeof useResumeViewer> }) {
   const sectionRef = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
   const scrollTo = useScrollTo();
@@ -55,7 +55,7 @@ export function Hero({ resume }: { resume: ReturnType<typeof useResumeDownload> 
             transition={{ delay: 1.9, duration: 0.7 }}
             className="kicker text-[10px] text-baby md:text-xs"
           >
-            {profile.roles.join(' · ')}
+            {about.welcome}
           </motion.p>
 
           <h1 className="mt-6 font-display text-[17vw] font-bold leading-[0.95] tracking-tight text-white sm:text-7xl lg:text-8xl xl:text-[7.5rem]">
@@ -78,12 +78,21 @@ export function Hero({ resume }: { resume: ReturnType<typeof useResumeDownload> 
           </h1>
 
           <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 2.22, duration: 0.7 }}
+            className="kicker mt-4 text-[9px] text-baby-dim"
+          >
+            {profile.roles.join(' · ')}
+          </motion.p>
+
+          <motion.p
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 2.3, duration: 0.8 }}
-            className="mt-7 max-w-md text-sm leading-relaxed text-muted md:text-base"
+            className="mt-7 max-w-md text-base leading-relaxed text-slate-200 md:text-lg"
           >
-            {profile.intro}
+            {about.tagline}
           </motion.p>
 
           <motion.div
@@ -101,14 +110,14 @@ export function Hero({ resume }: { resume: ReturnType<typeof useResumeDownload> 
               <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1">→</span>
             </button>
             <button
-              onClick={resume.start}
+              onClick={resume.show}
               className="group inline-flex items-center gap-3 rounded-full border border-white/20 px-7 py-3.5 font-display text-xs font-bold tracking-[0.18em] text-white transition-all duration-300 hover:border-baby hover:text-baby active:scale-[0.98]"
               data-cursor="ENTER"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true" className="transition-transform duration-300 group-hover:translate-y-0.5">
-                <path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 19h16" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M4 4h9a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4zM20 4h-1a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h2z" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              DOWNLOAD RESUME
+              VIEW / DOWNLOAD RESUME
             </button>
             <button
               onClick={() => scrollTo('contact')}
@@ -139,10 +148,10 @@ export function Hero({ resume }: { resume: ReturnType<typeof useResumeDownload> 
         animate={{ opacity: 1 }}
         transition={{ delay: 3.1, duration: 0.8 }}
         className="absolute bottom-8 left-1/2 z-10 -translate-x-1/2"
-        style={{ opacity: textOpacity }}
-      >
-        <span className="kicker animate-drop-hint text-[9px] text-slate-500">SCROLL TO EXPLORE</span>
-      </motion.div>
+          style={{ opacity: textOpacity }}
+        >
+          <span className="kicker animate-drop-hint text-[9px] text-slate-500">SCROLL TO EXPLORE ↓</span>
+        </motion.div>
     </section>
   );
 }

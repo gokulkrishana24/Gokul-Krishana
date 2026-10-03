@@ -19,8 +19,11 @@ export const profile = {
   email: 'gokulkrishana866@gmail.com',
   phone: '8248157966',
   phoneDisplay: '+91 82481 57966',
-  linkedin: 'https://linkedin.com/in/gokul-krishana',
+  linkedin: 'https://www.linkedin.com/in/gokul-krishana',
   github: 'https://github.com/gokulkrishana24',
+  /** LinkedIn and Instagram are linked out to, never scraped in the browser. */
+  instagram: 'https://www.instagram.com/gokul_krishana2006/',
+  instagramAlt: 'https://www.instagram.com/goo_coooll/',
   photo: '/images/profile.webp',
   interests: [
     'Software Development',
@@ -47,6 +50,9 @@ export const resumeConfig = {
 
 export const about = {
   kicker: 'WHO AM I?',
+  /** Shown under the hero name — the one-line positioning statement. */
+  tagline: 'Building secure, intelligent and interactive digital experiences.',
+  welcome: 'WELCOME TO MY DIGITAL UNIVERSE',
   paragraphs: [
     "I'm Gokul Krishana, a Computer Science Engineering student specializing in Cybersecurity at SRM Institute of Science and Technology.",
     'I enjoy building real-world systems at the intersection of software engineering, artificial intelligence, computer vision and cybersecurity.',
@@ -370,10 +376,13 @@ export const contact = {
     status: 'STATUS: AVAILABLE',
     prompt: 'WHAT SHOULD WE BUILD NEXT?',
   },
-  heading: "LET'S BUILD SOMETHING.",
+  heading: "LET'S BUILD IT.",
+  headingLead: 'HAVE AN IDEA?',
+  support:
+    "Whether you're looking for a premium website, an interactive digital experience or a custom software solution, let's create something people remember.",
   finalCta: {
-    heading: "LET'S BUILD SOMETHING.",
-    subheading: 'YOUR NEXT IDEA COULD BECOME SOMETHING REAL.',
+    heading: "YOUR NEXT DIGITAL EXPERIENCE COULD LOOK LIKE THIS.",
+    subheading: "LET'S BUILD IT.",
     primary: 'START A PROJECT →',
     secondary: "LET'S CONNECT",
   },

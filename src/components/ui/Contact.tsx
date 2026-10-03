@@ -5,18 +5,19 @@ import { contact, profile } from '@/data/content';
 import { LIMITS, PROJECT_TYPES, validateContact, type FieldErrors } from '@/lib/contact';
 import { useScrollTo } from '@/lib/lenis';
 import { Reveal } from './About';
-import { useResumeDownload, ResumeCinematic } from './ResumeCinematic';
+import type { useResumeViewer } from './ResumeViewer';
 
 /**
  * CONTACT — dark cinematic transition into a subtle terminal
- * (CONNECTION_REQUEST), the big LET'S BUILD SOMETHING heading, all
- * real info + buttons (VIEW GITHUB / CONNECT ON LINKEDIN / DOWNLOAD
- * RESUME with the same video flow), a contact form with an honest
- * mailto fallback, then FINAL CTA and FOOTER.
+ * (CONNECTION_REQUEST), the HAVE AN IDEA? / LET'S BUILD IT. heading,
+ * real info + buttons (VIEW GITHUB / CONNECT ON LINKEDIN / VIEW /
+ * DOWNLOAD RESUME), a contact form with an honest mailto fallback,
+ * then FINAL CTA and FOOTER.
+ *
+ * The resume button opens the shared viewer mounted by SiteShell —
+ * opening it never downloads the file.
  */
-export function Contact() {
-  const resume = useResumeDownload();
-
+export function Contact({ resume }: { resume: ReturnType<typeof useResumeViewer> }) {
   return (
     <>
       <section id="contact" className="relative overflow-hidden pt-28 md:pt-40" aria-label="Contact" data-splash="blue">
@@ -38,9 +39,15 @@ export function Contact() {
 
           <Reveal delay={0.1}>
             <h2 className="headline mt-12 text-center text-4xl font-bold leading-tight text-white md:text-7xl">
-              LET&apos;S BUILD<br />
-              <span className="text-baby">SOMETHING.</span>
+              {contact.headingLead}<br />
+              <span className="text-baby">{contact.heading}</span>
             </h2>
+          </Reveal>
+
+          <Reveal delay={0.14}>
+            <p className="mx-auto mt-6 max-w-2xl text-center text-sm leading-relaxed text-muted md:text-base">
+              {contact.support}
+            </p>
           </Reveal>
 
           <Reveal delay={0.16}>
@@ -57,10 +64,12 @@ export function Contact() {
               </div>
               <div>
                 <p className="kicker text-[9px] text-baby-dim">PROFILES</p>
-                <p className="mt-2 flex items-center justify-center gap-4 text-sm text-slate-200">
+                <p className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-slate-200">
                   <a href={profile.github} target="_blank" rel="noopener noreferrer" className="transition hover:text-baby">GitHub</a>
-                  <span className="text-white/20">·</span>
+                  <span aria-hidden="true" className="text-white/20">·</span>
                   <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" className="transition hover:text-baby">LinkedIn</a>
+                  <span aria-hidden="true" className="text-white/20">·</span>
+                  <a href={profile.instagram} target="_blank" rel="noopener noreferrer" className="transition hover:text-baby">Instagram</a>
                 </p>
               </div>
             </div>
@@ -87,11 +96,11 @@ export function Contact() {
                 CONNECT ON LINKEDIN
               </a>
               <button
-                onClick={resume.start}
+                onClick={resume.show}
+                data-cursor="OPEN"
                 className="rounded-full bg-baby px-7 py-3.5 font-display text-xs font-bold tracking-[0.18em] text-navy transition-all duration-300 hover:bg-sun"
-                data-cursor="ENTER"
               >
-                DOWNLOAD RESUME
+                VIEW / DOWNLOAD RESUME
               </button>
             </div>
           </Reveal>
@@ -108,16 +117,15 @@ export function Contact() {
             <p className="headline font-display text-sm font-bold tracking-[0.18em] text-white">{contact.footer.name}</p>
             <p className="mt-1 text-xs text-slate-400">{contact.footer.line}</p>
           </div>
-          <div className="flex items-center gap-6 text-xs text-slate-400">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400">
             <a href={profile.github} target="_blank" rel="noopener noreferrer" className="transition hover:text-baby">GitHub</a>
             <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" className="transition hover:text-baby">LinkedIn</a>
+            <a href={profile.instagram} target="_blank" rel="noopener noreferrer" className="transition hover:text-baby">Instagram</a>
             <a href={`mailto:${profile.email}`} className="transition hover:text-baby">Email</a>
           </div>
           <p className="kicker text-[9px] text-baby-dim">{contact.footer.copyright}</p>
         </div>
       </footer>
-
-      <ResumeCinematic open={resume.open} onFinish={resume.finish} />
     </>
   );
 }
@@ -139,26 +147,44 @@ function ContactForm() {
   const [form, setForm] = useState({
     name: '',
     email: '',
-    type: PROJECT_TYPES[0] as string,
+    type: '',
     message: '',
     company: '', // honeypot
   });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [status, setStatus] = useState<Status>('idle');
   const [notice, setNotice] = useState('');
+  const [emailCopied, setEmailCopied] = useState(false);
 
   const update = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm((f) => ({ ...f, [key]: e.target.value }));
     // Clear a field's error as soon as the visitor edits it.
-    setErrors((prev) => (prev[key as keyof FieldErrors] ? { ...prev, [key]: undefined } : prev));
+    const errorField = key === 'type' ? 'projectType' : key;
+    setErrors((prev) => (prev[errorField as keyof FieldErrors] ? { ...prev, [errorField]: undefined } : prev));
   };
 
   const openMailDraft = (to: string) => {
-    const subject = encodeURIComponent(`[Portfolio] ${form.type} — ${form.name}`);
+    const subject = encodeURIComponent(`New Portfolio Project Inquiry — ${form.type}`);
     const body = encodeURIComponent(
-      `Hi Gokul,\n\n${form.message}\n\n— ${form.name}\n${form.email}\nProject type: ${form.type}`,
+      `Name: ${form.name}\nEmail: ${form.email}\nProject Type: ${form.type}\n\nMessage:\n${form.message}`,
     );
     window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+  };
+
+  const fallbackToMail = (to = profile.email) => {
+    openMailDraft(to);
+    setStatus('fallback');
+    setNotice(`Your email app should open with the message ready. If it doesn't, email me directly at ${to}.`);
+    setEmailCopied(false);
+  };
+
+  const copyEmail = async () => {
+    try {
+      await navigator.clipboard.writeText(profile.email);
+      setEmailCopied(true);
+    } catch {
+      setNotice(`Copying is unavailable. Please email me directly at ${profile.email}.`);
+    }
   };
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -213,26 +239,22 @@ function ContactForm() {
       }
 
       if (data.delivered === 'fallback') {
-        openMailDraft(data.to || profile.email);
-        setStatus('fallback');
-        setNotice(`Opening your mail app — the message is pre-filled for ${data.to || profile.email}.`);
+        fallbackToMail(profile.email);
         return;
       }
 
       setStatus('sent');
       setNotice(`Thanks ${form.name.split(' ')[0]} — message sent. I’ll reply to ${form.email}.`);
-      setForm({ name: '', email: '', type: PROJECT_TYPES[0] as string, message: '', company: '' });
+      setForm({ name: '', email: '', type: '', message: '', company: '' });
       setErrors({});
     } catch {
-      // Network failure — still give the visitor a working route.
-      openMailDraft(profile.email);
-      setStatus('fallback');
-      setNotice(`Could not reach the server — opening your mail app instead (${profile.email}).`);
+      // The API could not be reached; preserve the message in a mail draft.
+      fallbackToMail(profile.email);
     }
   };
 
   const inputCls = (field?: string) =>
-    `w-full rounded-xl border bg-white/5 px-5 py-3.5 text-sm text-white placeholder:text-slate-500 transition-colors focus:border-baby/60 ${
+    `w-full rounded-xl border bg-white/5 px-5 py-3.5 text-sm text-white placeholder:text-slate-500 transition-colors focus-visible:border-baby/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-baby/20 ${
       field && errors[field as keyof FieldErrors] ? 'border-accent-red/70' : 'border-white/10'
     }`;
 
@@ -305,7 +327,12 @@ function ContactForm() {
             onChange={update('type')}
             className={`${inputCls('projectType')} appearance-none`}
             required
+            aria-invalid={Boolean(errors.projectType)}
+            aria-describedby={errors.projectType ? `${uid}-projectType-error` : undefined}
           >
+            <option value="" disabled className="bg-navy text-slate-400">
+              Choose a project type
+            </option>
             {PROJECT_TYPES.map((t) => (
               <option key={t} value={t} className="bg-navy text-white">
                 {t}
@@ -362,16 +389,30 @@ function ContactForm() {
             className="group inline-flex items-center gap-3 rounded-full bg-baby px-8 py-3.5 font-display text-xs font-bold tracking-[0.18em] text-navy transition-all duration-300 hover:bg-sun disabled:cursor-wait disabled:opacity-60"
             data-cursor="ENTER"
           >
-            {busy ? 'SENDING…' : "LET'S BUILD"}
+            {busy ? (
+              <>
+                <span aria-hidden="true" className="h-3 w-3 animate-spin rounded-full border border-navy/30 border-t-navy motion-reduce:animate-none" />
+                PREPARING CONNECTION...
+              </>
+            ) : "LET'S BUILD"}
             <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1">
               →
             </span>
           </button>
 
           {notice && (
-            <p className="max-w-sm text-xs text-muted" role="status" aria-live="polite">
-              {notice}
-            </p>
+            <div className="max-w-sm text-xs text-muted" role="status" aria-live="polite">
+              <p>{notice}</p>
+              {status === 'fallback' && (
+                <button
+                  type="button"
+                  onClick={copyEmail}
+                  className="mt-2 rounded-sm text-baby underline decoration-baby/40 underline-offset-4 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-baby/60"
+                >
+                  {emailCopied ? 'EMAIL COPIED' : `COPY ${profile.email}`}
+                </button>
+              )}
+            </div>
           )}
         </div>
       </form>

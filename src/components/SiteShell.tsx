@@ -15,15 +15,19 @@ import { Experience, Certifications } from './ui/Experience';
 import { BeyondCode, HowIThink, Philosophy, DomeGallery } from './ui/BeyondCode';
 import { Contact } from './ui/Contact';
 import { CurvedLoop, PixelDivider } from './ui/CurvedLoop';
-import { useResumeDownload } from './ui/ResumeCinematic';
+import { ResumeViewer, useResumeViewer } from './ui/ResumeViewer';
 
 /**
  * SITE SHELL — one continuous journey rather than a stack of sections.
  * CurvedLoop and PixelDivider are the connective tissue: the thin
  * curves keep the route visible, the dividers mark the big chapters.
+ *
+ * The resume viewer lives here, once, and is shared by the Hero and
+ * the Contact section. Nothing about it is loaded until a visitor
+ * actually asks to see the resume.
  */
 export function SiteShell() {
-  const resume = useResumeDownload();
+  const resume = useResumeViewer();
 
   return (
     <SmoothScrollProvider>
@@ -54,8 +58,10 @@ export function SiteShell() {
         <HowIThink />
         <Philosophy />
         <DomeGallery />
-        <Contact />
+        <Contact resume={resume} />
       </main>
+
+      <ResumeViewer open={resume.open} onClose={resume.close} />
     </SmoothScrollProvider>
   );
 }
