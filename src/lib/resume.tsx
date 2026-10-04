@@ -45,8 +45,14 @@ type ResumeState = {
   preparing: boolean;
   /** 0..1 progress of the preparation */
   progress: number;
+  /** true once hero.mp4 has finished playing */
+  videoDone: boolean;
   /** true once the file has actually been handed to the browser */
   downloaded: boolean;
+  /** ref the overlay attaches its <video> to */
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  /** the overlay calls this when the clip ends or fails */
+  notifyVideoEnd: () => void;
   /** open the viewer — never downloads, never auto-fetches */
   view: () => void;
   closeView: () => void;
@@ -64,8 +70,18 @@ export function useResume(): ResumeState {
   return ctx;
 }
 
-/** How long the preparation overlay holds before the download fires. */
-const PREP_MS = 1400;
+/**
+ * Fallback ceiling for the preparation sequence.
+ *
+ * The download is driven by hero.mp4 actually finishing. If the video
+ * cannot load, decode or play — poor connection, autoplay refusal, codec
+ * the device won't decode — this timer releases the download anyway, so
+ * a visitor is never trapped behind a loading screen that cannot end.
+ */
+const PREP_FALLBACK_MS = 6000;
+
+/** Minimum time the overlay stays up, so the beat reads as intentional. */
+const PREP_MIN_MS = 1200;
 
 export function ResumeProvider({ children }: { children: ReactNode }) {
   const [heroCompleted, setHeroCompleted] = useState(false);
@@ -73,9 +89,29 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
   const [preparing, setPreparing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [downloaded, setDownloaded] = useState(false);
+  /** true once hero.mp4 has finished — drives the RESUME READY state */
+  const [videoDone, setVideoDone] = useState(false);
 
   const anchorRef = useRef<HTMLAnchorElement | null>(null);
   const timersRef = useRef<number[]>([]);
+  /** the <video> the overlay mounts for the download sequence */
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  /** callback the overlay invokes when the clip finishes or fails */
+  const onVideoEndRef = useRef<(() => void) | null>(null);
+
+  /**
+   * Handed to the overlay so it can report that the clip finished.
+   * A ref, not state: this is a one-shot signal, and routing it through
+   * state would re-render the provider mid-sequence.
+   */
+  const setVideoSignal = useCallback((fn: (() => void) | null) => {
+    onVideoEndRef.current = fn;
+  }, []);
+
+  /** Called by the overlay's <video> on ended / error. */
+  const notifyVideoEnd = useCallback(() => {
+    onVideoEndRef.current?.();
+  }, []);
 
   /* ---------------------------------------------------------------- */
   /* session memory                                                    */
@@ -96,6 +132,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       timersRef.current.forEach((id) => window.clearInterval(id));
       timersRef.current.forEach((id) => window.clearTimeout(id));
       timersRef.current = [];
+      onVideoEndRef.current = null;
     };
   }, []);
 
@@ -130,31 +167,69 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
     if (preparing) return;
     setPreparing(true);
     setProgress(0);
+    setVideoDone(false);
 
-    // Ramp the bar, then fire. The anchor click happens inside a timer
-    // that is only ever created from this click handler.
     const started = performance.now();
-    const interval = window.setInterval(() => {
-      const t = Math.min(1, (performance.now() - started) / PREP_MS);
-      setProgress(t);
-      if (t >= 1) {
-        window.clearInterval(interval);
-        timersRef.current = timersRef.current.filter((id) => id !== interval);
+    let finished = false;
 
-        const anchor = anchorRef.current;
-        if (anchor) {
-          write(DOWNLOAD_KEY, '1');
-          setDownloaded(true);
-          anchor.click();
-        }
-        window.setTimeout(() => {
-          setPreparing(false);
-          setProgress(0);
-        }, 700);
+    /** Fires the download exactly once, however the sequence ends. */
+    const release = () => {
+      if (finished) return;
+      finished = true;
+
+      window.clearInterval(progressTimer);
+      window.clearTimeout(fallbackTimer);
+      timersRef.current = timersRef.current.filter((id) => id !== progressTimer && id !== fallbackTimer);
+
+      const anchor = anchorRef.current;
+      if (anchor) {
+        write(DOWNLOAD_KEY, '1');
+        setDownloaded(true);
+        anchor.click();
       }
-    }, 60);
-    timersRef.current.push(interval);
-  }, [preparing, write]);
+      const t = window.setTimeout(() => {
+        timersRef.current = timersRef.current.filter((id) => id !== t);
+        setPreparing(false);
+        setProgress(0);
+      }, 900);
+      timersRef.current.push(t);
+    };
+
+    /**
+     * The happy path: hero.mp4 finished playing. Held for a minimum beat
+     * so a very short clip still reads as a deliberate sequence.
+     */
+    const onVideoEnd = () => {
+      if (finished) return;
+      const elapsed = performance.now() - started;
+      const wait = Math.max(0, PREP_MIN_MS - elapsed);
+      const t1 = window.setTimeout(() => {
+        timersRef.current = timersRef.current.filter((id) => id !== t1);
+        setProgress(1);
+        setVideoDone(true);
+        // Let the "RESUME READY" state register before the file is saved.
+        const t2 = window.setTimeout(() => {
+          timersRef.current = timersRef.current.filter((id) => id !== t2);
+          release();
+        }, 450);
+        timersRef.current.push(t2);
+      }, wait);
+      timersRef.current.push(t1);
+    };
+
+    // Progress follows the real video, not a fake timer.
+    const progressTimer = window.setInterval(() => {
+      const v = videoRef.current;
+      if (v && v.duration > 0) setProgress(Math.min(1, v.currentTime / v.duration));
+    }, 80);
+    timersRef.current.push(progressTimer);
+
+    // The safety net: never leave anyone stuck.
+    const fallbackTimer = window.setTimeout(release, PREP_FALLBACK_MS);
+    timersRef.current.push(fallbackTimer);
+
+    setVideoSignal(onVideoEnd);
+  }, [preparing, write, setVideoSignal]);
 
   const value = useMemo<ResumeState>(
     () => ({
@@ -162,13 +237,28 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       viewOpen,
       preparing,
       progress,
+      videoDone,
       downloaded,
+      videoRef,
+      notifyVideoEnd,
       view,
       closeView,
       download,
       completeHero,
     }),
-    [heroCompleted, viewOpen, preparing, progress, downloaded, view, closeView, download, completeHero],
+    [
+      heroCompleted,
+      viewOpen,
+      preparing,
+      progress,
+      videoDone,
+      downloaded,
+      notifyVideoEnd,
+      view,
+      closeView,
+      download,
+      completeHero,
+    ],
   );
 
   return (

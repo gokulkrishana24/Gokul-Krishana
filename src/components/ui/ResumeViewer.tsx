@@ -27,7 +27,8 @@ import { BackgroundVideo } from './BackgroundVideo';
  *   4. a handful of controlled red accent particles
  *   5. a fine technical grid
  *   6. slow abstract light trails
- *   7. the muted hero footage at a whisper of opacity (desktop only)
+ *   7. dedicated viewer footage (NOT hero.mp4 — that is the intro and the
+ *      download loading sequence) at a whisper of opacity, desktop only
  *
  * Interaction:
  *   • mouse over the stage → subtle rotateX/rotateY (max ±2.5°) + a
@@ -90,6 +91,13 @@ export function useResumeViewer() {
 /* ------------------------------------------------------------------ */
 /* Viewer                                                             */
 /* ------------------------------------------------------------------ */
+
+/** Safari still exposes only the prefixed fullscreen API. */
+type FullscreenCapableElement = HTMLElement & {
+  webkitRequestFullscreen?: () => Promise<void> | void;
+  webkitExitFullscreen?: () => Promise<void> | void;
+  webkitFullscreenElement?: Element | null;
+};
 
 export function ResumeViewer() {
   const { viewOpen: open, closeView: onClose } = useResume();
@@ -273,6 +281,42 @@ export function ResumeViewer() {
   };
 
   const zoomLabel = zoom === 'fit' ? 'FIT' : `${zoom}%`;
+
+  /* Fullscreen support, including Safari's prefixed API. */
+  const [canFullscreen, setCanFullscreen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const el = document.documentElement as FullscreenCapableElement;
+    setCanFullscreen(
+      Boolean(el.requestFullscreen || el.webkitRequestFullscreen),
+    );
+
+    const onChange = () => {
+      const active = Boolean(document.fullscreenElement ?? el.webkitFullscreenElement);
+      setIsFullscreen(active);
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange);
+    };
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    const el = document.documentElement as FullscreenCapableElement;
+    try {
+      if (document.fullscreenElement ?? el.webkitFullscreenElement) {
+        await (document.exitFullscreen?.() ?? el.webkitExitFullscreen?.());
+      } else {
+        await (el.requestFullscreen?.() ?? el.webkitRequestFullscreen?.());
+      }
+    } catch {
+      // Denied (iOS Safari has no Element API at all, or the user
+      // dismissed it) — the control simply does nothing.
+    }
+  }, []);
   const scroll = (tilt.rx + 90) / 180; // 0..1 → where the reflection sits
 
   if (!open) return null;
@@ -374,8 +418,11 @@ export function ResumeViewer() {
     >
       {/* ---------------- atmosphere layers, all behind the document ------------- */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-        {/* 7 — the real footage, a whisper, desktop only */}
-        <BackgroundVideo src={resumeConfig.video} opacity={0.07} className="hidden md:block" />
+        {/* 7 — dedicated viewer footage, NOT hero.mp4 (that belongs to the
+        intro and the download sequence). Kept at a whisper, desktop
+        only, and it silently falls back to the CSS layers if the file
+        is not present. */}
+        <BackgroundVideo src={resumeConfig.viewerVideo} opacity={0.16} className="hidden md:block" />
 
         {/* 1 — deep navy base */}
         <div className="absolute inset-0 bg-navy" />
@@ -550,6 +597,14 @@ export function ResumeViewer() {
           </Control>
 
           <Control onClick={resetView}>RESET VIEW</Control>
+
+          {/* Fullscreen — offered only where the browser actually supports
+              it, and never announced as available when it is not. */}
+          {canFullscreen && (
+            <Control onClick={toggleFullscreen} aria-label={isFullscreen ? 'Exit fullscreen' : 'View fullscreen'}>
+              {isFullscreen ? 'EXIT FULL' : 'FULLSCREEN'}
+            </Control>
+          )}
 
           {/* the ONLY path to the file — an explicit, user-initiated download */}
           <a

@@ -41,7 +41,17 @@ export const profile = {
 export const resumeConfig = {
   pdf: '/resume/Gokul_Krishana_Resume.pdf',
   pdfName: 'Gokul_Krishana_Resume.pdf',
+  /** the cinematic clip used for the intro and the download sequence */
   video: '/video/hero.mp4',
+  /**
+   * Background for the resume viewer — deliberately NOT hero.mp4, which
+   * belongs to the intro and the download loading experience.
+   *
+   * If this file is absent the viewer's CSS atmosphere layers simply
+   * remain: BackgroundVideo hides a video that errors, so a missing file
+   * degrades to the animated background rather than breaking anything.
+   */
+  viewerVideo: '/video/resume-bg.mp4',
 } as const;
 
 /* ------------------------------------------------------------------ */

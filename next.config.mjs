@@ -50,6 +50,39 @@ const csp = [
   'upgrade-insecure-requests',
 ].join('; ');
 
+/**
+ * CSP for the resume PDF itself.
+ *
+ * Identical to the site policy EXCEPT it drops `frame-ancestors 'none'`.
+ *
+ * Why: the premium resume viewer embeds this PDF in an <iframe>. A
+ * `frame-ancestors 'none'` (and the matching X-Frame-Options: DENY)
+ * instructs the browser to REFUSE to render the document inside a frame
+ * at all, which is what produced the blank/broken document area in the
+ * viewer. Every other protection is kept, so the file still cannot be
+ * framed by any other origin, scripted, or used as an object.
+ *
+ * Only the PDF gets this policy. All real pages keep frame-ancestors
+ * 'none' + X-Frame-Options: DENY, so clickjacking protection is
+ * unchanged everywhere that actually matters.
+ */
+const cspEmbeddable = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "media-src 'self' blob:",
+  "connect-src 'self'",
+  "frame-src 'self'",
+  "object-src 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  // NOTE: no frame-ancestors — this document is meant to be framed by
+  // the resume viewer on this same origin.
+  'upgrade-insecure-requests',
+].join('; ');
+
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -83,6 +116,30 @@ const nextConfig = {
             key: 'Strict-Transport-Security',
             // TLS is terminated by the host (Vercel), which also
             // performs the HTTP -> HTTPS redirect.
+            value: 'max-age=63072000; includeSubDomains; preload',
+          },
+        ],
+      },
+      {
+        // The resume PDF must be framable by the viewer on this origin.
+        // It keeps the full CSP, nosniff, referrer and permissions
+        // policy — but no X-Frame-Options and no frame-ancestors, both of
+        // which made browsers refuse to display it and left the viewer
+        // showing a blank document.
+        source: '/resume/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: cspEmbeddable },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          {
+            key: 'Permissions-Policy',
+            value:
+              'camera=(), microphone=(), geolocation=(), payment=(), usb=(), ' +
+              'interest-cohort=(), browsing-topics=()',
+          },
+          { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
+          {
+            key: 'Strict-Transport-Security',
             value: 'max-age=63072000; includeSubDomains; preload',
           },
         ],
