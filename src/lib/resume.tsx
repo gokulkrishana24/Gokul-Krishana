@@ -41,8 +41,14 @@ type ResumeState = {
   heroCompleted: boolean;
   /** the premium viewer should be open */
   viewOpen: boolean;
-  /** the "PREPARING RESUME" overlay should be showing */
+  /** the cinematic hero.mp4 loading page should be showing */
   preparing: boolean;
+  /**
+   * What the loading page is leading to. Both resume actions pass through
+   * hero.mp4 before anything is revealed or saved, so the reveal happens
+   * on the visitor's terms rather than the instant they click.
+   */
+  introFor: 'view' | 'download' | null;
   /** 0..1 progress of the preparation */
   progress: number;
   /** true once hero.mp4 has finished playing */
@@ -53,10 +59,10 @@ type ResumeState = {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   /** the overlay calls this when the clip ends or fails */
   notifyVideoEnd: () => void;
-  /** open the viewer — never downloads, never auto-fetches */
+  /** open the viewer (behind the hero.mp4 loading page) — never downloads */
   view: () => void;
   closeView: () => void;
-  /** explicit DOWNLOAD RESUME — the only path to the file */
+  /** explicit DOWNLOAD RESUME (behind the hero.mp4 loading page) — the only path to the file */
   download: () => void;
   /** called by the hero/intro when it finishes playing */
   completeHero: () => void;
@@ -87,6 +93,8 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
   const [heroCompleted, setHeroCompleted] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [preparing, setPreparing] = useState(false);
+  /** which action the hero.mp4 loading page is leading to */
+  const [introFor, setIntroFor] = useState<'view' | 'download' | null>(null);
   const [progress, setProgress] = useState(0);
   const [downloaded, setDownloaded] = useState(false);
   /** true once hero.mp4 has finished — drives the RESUME READY state */
@@ -156,23 +164,33 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
     });
   }, [write]);
 
-  const view = useCallback(() => setViewOpen(true), []);
   const closeView = useCallback(() => setViewOpen(false), []);
 
   /* ---------------------------------------------------------------- */
-  /* the one and only download path                                    */
+  /* the shared hero.mp4 loading page                                  */
   /* ---------------------------------------------------------------- */
 
-  const download = useCallback(() => {
+  /**
+   * Runs hero.mp4 as a full-screen loading page and then performs the
+   * requested action.
+   *
+   * Both VIEW RESUME and DOWNLOAD RESUME go through here, so the reveal
+   * is always paced by the clip instead of snapping open. Crucially the
+   * viewer is only opened AFTER the loading page finishes — nothing is
+   * opened or saved at any earlier point, and the fallback timer means a
+   * clip that cannot play still resolves rather than hanging.
+   */
+  const runIntro = useCallback((mode: 'view' | 'download') => {
     if (preparing) return;
     setPreparing(true);
+    setIntroFor(mode);
     setProgress(0);
     setVideoDone(false);
 
     const started = performance.now();
     let finished = false;
 
-    /** Fires the download exactly once, however the sequence ends. */
+    /** Performs the action and dismisses the loading page. */
     const release = () => {
       if (finished) return;
       finished = true;
@@ -181,24 +199,28 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(fallbackTimer);
       timersRef.current = timersRef.current.filter((id) => id !== progressTimer && id !== fallbackTimer);
 
-      const anchor = anchorRef.current;
-      if (anchor) {
-        write(DOWNLOAD_KEY, '1');
-        setDownloaded(true);
-        anchor.click();
+      if (mode === 'download') {
+        const anchor = anchorRef.current;
+        if (anchor) {
+          write(DOWNLOAD_KEY, '1');
+          setDownloaded(true);
+          anchor.click();
+        }
+      } else {
+        // VIEW: reveal the document. This still never downloads.
+        setViewOpen(true);
       }
+
       const t = window.setTimeout(() => {
         timersRef.current = timersRef.current.filter((id) => id !== t);
         setPreparing(false);
+        setIntroFor(null);
         setProgress(0);
-      }, 900);
+      }, 500);
       timersRef.current.push(t);
     };
 
-    /**
-     * The happy path: hero.mp4 finished playing. Held for a minimum beat
-     * so a very short clip still reads as a deliberate sequence.
-     */
+    /** The happy path: hero.mp4 finished playing. */
     const onVideoEnd = () => {
       if (finished) return;
       const elapsed = performance.now() - started;
@@ -207,7 +229,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         timersRef.current = timersRef.current.filter((id) => id !== t1);
         setProgress(1);
         setVideoDone(true);
-        // Let the "RESUME READY" state register before the file is saved.
+        // Let the "READY" state register before revealing/saving.
         const t2 = window.setTimeout(() => {
           timersRef.current = timersRef.current.filter((id) => id !== t2);
           release();
@@ -231,11 +253,15 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
     setVideoSignal(onVideoEnd);
   }, [preparing, write, setVideoSignal]);
 
+  const view = useCallback(() => runIntro('view'), [runIntro]);
+  const download = useCallback(() => runIntro('download'), [runIntro]);
+
   const value = useMemo<ResumeState>(
     () => ({
       heroCompleted,
       viewOpen,
       preparing,
+      introFor,
       progress,
       videoDone,
       downloaded,
@@ -250,6 +276,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       heroCompleted,
       viewOpen,
       preparing,
+      introFor,
       progress,
       videoDone,
       downloaded,

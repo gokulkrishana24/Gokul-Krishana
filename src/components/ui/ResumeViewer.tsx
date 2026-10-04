@@ -419,10 +419,11 @@ export function ResumeViewer() {
       {/* ---------------- atmosphere layers, all behind the document ------------- */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
         {/* 7 — dedicated viewer footage, NOT hero.mp4 (that belongs to the
-        intro and the download sequence). Kept at a whisper, desktop
-        only, and it silently falls back to the CSS layers if the file
-        is not present. */}
-        <BackgroundVideo src={resumeConfig.viewerVideo} opacity={0.16} className="hidden md:block" />
+        intro and the download sequence). Kept at a whisper, and it
+        silently falls back to the CSS layers if the file is not
+        present. BackgroundVideo lazy-mounts, so this only loads once
+        the visitor actually opens the viewer. */}
+        <BackgroundVideo src={resumeConfig.viewerVideo} opacity={0.16} />
 
         {/* 1 — deep navy base */}
         <div className="absolute inset-0 bg-navy" />

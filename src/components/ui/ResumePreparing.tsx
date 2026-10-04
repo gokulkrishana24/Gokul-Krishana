@@ -20,10 +20,17 @@ import { useReducedMotion } from '@/lib/useIsTouch';
  * It only reports that the video ended.
  */
 export function ResumePreparing() {
-  const { preparing, progress, videoDone, downloaded, videoRef, notifyVideoEnd } = useResume();
+  const { preparing, introFor, progress, videoDone, downloaded, videoRef, notifyVideoEnd } = useResume();
   const reduced = useReducedMotion();
   const pct = Math.round(Math.min(1, progress) * 100);
   const ready = videoDone || pct >= 100;
+  const isView = introFor === 'view';
+
+  /** Copy reflects which action this loading page is leading to. */
+  const heading = isView ? 'OPENING YOUR RESUME' : 'PREPARING YOUR RESUME';
+  const subLabel = isView
+    ? (ready ? 'OPENING…' : 'LOADING…')
+    : (ready ? 'SAVED TO YOUR DEVICE' : 'LOADING…');
 
   /* Kick playback off as soon as the overlay exists, so the clip is
      actually running rather than waiting on a user gesture we already
@@ -52,7 +59,7 @@ export function ResumePreparing() {
           className="fixed inset-0 z-[95] flex items-center justify-center overflow-hidden bg-navy"
           role="status"
           aria-live="polite"
-          aria-label={ready ? 'Resume ready, download starting' : 'Preparing your resume'}
+          aria-label={ready ? 'Resume ready' : isView ? 'Opening your resume' : 'Preparing your resume'}
         >
           {/* the loading experience: hero.mp4, muted and inline */}
           {!reduced && (
@@ -88,7 +95,7 @@ export function ResumePreparing() {
             <p className="kicker text-[10px] text-baby-dim">GOKUL KRISHANA</p>
 
             <h2 className="headline mt-4 text-2xl font-bold text-white sm:text-3xl">
-              {ready ? 'RESUME READY' : 'PREPARING YOUR RESUME'}
+              {ready ? 'RESUME READY' : heading}
             </h2>
 
             {/* progress rail */}
@@ -101,7 +108,7 @@ export function ResumePreparing() {
 
             <div className="mt-3 flex items-center justify-between">
               <span className="kicker text-[9px] text-slate-500">
-                {ready ? 'SAVED TO YOUR DEVICE' : 'LOADING…'}
+                {subLabel}
               </span>
               <span className="kicker text-[9px] text-slate-400">{pct}%</span>
             </div>
@@ -121,7 +128,7 @@ export function ResumePreparing() {
               ))}
             </div>
 
-            {downloaded && (
+            {downloaded && !isView && (
               <p className="mt-6 text-[11px] text-slate-500">
                 If your browser blocked the save, use the DOWNLOAD PDF button in the viewer.
               </p>

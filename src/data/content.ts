@@ -51,7 +51,7 @@ export const resumeConfig = {
    * remain: BackgroundVideo hides a video that errors, so a missing file
    * degrades to the animated background rather than breaking anything.
    */
-  viewerVideo: '/video/resume-bg.mp4',
+  viewerVideo: '/video/yacht.mp4',
 } as const;
 
 /* ------------------------------------------------------------------ */
