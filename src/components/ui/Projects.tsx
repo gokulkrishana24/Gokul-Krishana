@@ -14,7 +14,7 @@ import { Reveal } from './About';
  */
 export function Projects() {
   return (
-    <section id="projects" className="relative py-28 md:py-40" aria-label="Selected work" data-splash="blue">
+    <section id="projects" className="relative py-28 md:py-40" aria-label="Selected work" data-splash="blue" data-music="tech">
       <div className="mx-auto max-w-7xl px-5 md:px-10">
         <Reveal>
           <p className="kicker text-[10px] text-sun md:text-xs">SELECTED WORK</p>
@@ -38,9 +38,14 @@ export function Projects() {
 function ProjectRow({ project: p }: { project: Project }) {
   const [hovered, setHovered] = useState(false);
   const hero = Boolean(p.hero);
+  /** two projects score differently: AI lifts the tech atmosphere,
+      SecureClip darkens it. See SCENES in @/lib/music. */
+  const music = p.id === 'facerecognition' ? 'lift' : p.id === 'secureclip' ? 'dark' : null;
 
   return (
     <article
+      id={`project-${p.id}`}
+      data-music={music ?? undefined}
       className={`grid items-center gap-10 lg:grid-cols-2 lg:gap-16 ${p.index === '02' || p.index === '04' ? 'lg:[&>*:first-child]:order-2' : ''}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

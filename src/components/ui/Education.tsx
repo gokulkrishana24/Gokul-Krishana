@@ -92,7 +92,7 @@ export function School() {
   const ghostY = useTransform(scrollYProgress, [0, 1], ['-4%', '8%']);
 
   return (
-    <section ref={sectionRef} id="school" className="relative overflow-hidden py-28 md:py-40" aria-label="School — where it all began" data-splash="yellow">
+    <section ref={sectionRef} id="school" className="relative overflow-hidden py-28 md:py-40" aria-label="School — where it all began" data-music="warm" data-splash="yellow">
       <motion.span
         aria-hidden="true"
         style={{ y: ghostY }}
@@ -224,7 +224,7 @@ export function College() {
   const [logoError, setLogoError] = useState(false);
 
   return (
-    <section ref={sectionRef} id="college" className="relative overflow-hidden py-28 md:py-40" aria-label="College journey — SRM" data-splash="yellow">
+    <section ref={sectionRef} id="college" className="relative overflow-hidden py-28 md:py-40" aria-label="College journey — SRM" data-music="tech" data-splash="yellow">
       <motion.span
         aria-hidden="true"
         style={{ y: ghostY }}

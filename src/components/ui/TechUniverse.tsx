@@ -70,7 +70,7 @@ export function TechUniverse() {
   }, [floaters]);
 
   return (
-    <section ref={ref} id="tech" className="relative overflow-hidden py-28 md:py-40" aria-label="Technical universe" data-splash="blue">
+    <section ref={ref} id="tech" className="relative overflow-hidden py-28 md:py-40" aria-label="Technical universe" data-splash="blue" data-music="tech">
       {/* curved connector from college */}
       <CurvedConnector />
 

@@ -17,7 +17,7 @@ import { Reveal } from './About';
 
 export function BeyondCode() {
   return (
-    <section id="beyond" className="relative py-28 md:py-40" aria-label="Beyond code" data-splash="yellow">
+    <section id="beyond" className="relative py-28 md:py-40" aria-label="Beyond code" data-splash="yellow" data-music="calm">
       <div className="mx-auto max-w-7xl px-5 md:px-10">
         <div className="grid items-center gap-14 lg:grid-cols-[0.9fr_1.1fr]">
           {/* real event photo with editorial frame */}
@@ -86,7 +86,7 @@ export function HowIThink() {
   const reduced = useReducedMotion();
 
   return (
-    <section id="how-i-think" className="relative overflow-hidden py-28 md:py-40" aria-label="How I think" data-splash="blue">
+    <section id="how-i-think" className="relative overflow-hidden py-28 md:py-40" aria-label="How I think" data-splash="blue" data-music="calm">
       <div className="digital-grid pointer-events-none absolute inset-0 opacity-25" aria-hidden="true" />
 
       <div className="relative mx-auto max-w-5xl px-5 md:px-10">
@@ -155,7 +155,7 @@ export function HowIThink() {
 
 export function Philosophy() {
   return (
-    <section id="philosophy" className="relative py-24 md:py-32" aria-label="Personal philosophy">
+    <section id="philosophy" className="relative py-24 md:py-32" aria-label="Personal philosophy" data-music="calm">
       <div className="mx-auto max-w-4xl px-5 text-center md:px-10">
         <Reveal>
           <p className="headline text-2xl font-bold leading-snug text-white md:text-4xl">

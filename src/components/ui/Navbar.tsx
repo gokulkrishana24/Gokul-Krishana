@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { NAV, profile } from '@/data/content';
 import { useLenis, useScrollTo } from '@/lib/lenis';
 import { useIsTouch } from '@/lib/useIsTouch';
+import { MusicToggle } from './MusicToggle';
 
 /**
  * NAVBAR — transparent at rest; after scroll it gains a deep navy
@@ -112,7 +113,8 @@ export function Navbar() {
             ))}
           </div>
 
-          <div className="hidden items-center xl:flex">
+          <div className="hidden items-center gap-4 xl:flex">
+            <MusicToggle />
             <button
               onClick={() => go('contact')}
               className="rounded-full border border-baby/50 px-5 py-2.5 font-display text-[11px] font-bold tracking-[0.18em] text-baby transition-all duration-300 hover:border-sun hover:bg-sun/10 hover:text-sun"
@@ -120,6 +122,12 @@ export function Navbar() {
             >
               LET&apos;S CONNECT
             </button>
+          </div>
+
+          {/* sound control stays reachable on small screens, out of the way of
+              the menu button and of every scroll gesture */}
+          <div className="xl:hidden">
+            <MusicToggle />
           </div>
 
           {/* mobile / tablet toggle */}
@@ -178,7 +186,7 @@ export function Navbar() {
                 transition={{ delay: 0.5, duration: 0.5 }}
                 className="mt-8 w-fit rounded-full border border-sun/50 bg-sun/10 px-7 py-3.5 font-display text-xs font-bold tracking-[0.2em] text-sun"
               data-cursor="ENTER"
-            >
+              >
                 LET&apos;S WORK TOGETHER
               </motion.button>
             </nav>

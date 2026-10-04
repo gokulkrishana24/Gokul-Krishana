@@ -15,7 +15,7 @@ export function About() {
   const bgY = useTransform(scrollYProgress, [0, 1], ['-6%', '6%']);
 
   return (
-    <section ref={ref} id="about" className="relative overflow-hidden py-28 md:py-40" aria-label="About Gokul Krishana">
+    <section ref={ref} id="about" className="relative overflow-hidden py-28 md:py-40" aria-label="About Gokul Krishana" data-music="warm">
       {/* oversized ghost word */}
       <motion.span
         aria-hidden="true"

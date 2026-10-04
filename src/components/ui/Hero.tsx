@@ -39,6 +39,7 @@ export function Hero({ resume }: { resume: ReturnType<typeof useResumeViewer> })
       id="hero"
       className="relative flex min-h-[100svh] items-center overflow-hidden"
       data-splash="blue"
+      data-music="hero"
       aria-label="Introduction"
     >
       {/* atmosphere — subtle cinematic footage behind the hero only */}

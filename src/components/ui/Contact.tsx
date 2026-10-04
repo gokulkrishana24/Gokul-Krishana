@@ -20,7 +20,7 @@ import type { useResumeViewer } from './ResumeViewer';
 export function Contact({ resume }: { resume: ReturnType<typeof useResumeViewer> }) {
   return (
     <>
-      <section id="contact" className="relative overflow-hidden pt-28 md:pt-40" aria-label="Contact" data-splash="blue">
+      <section id="contact" className="relative overflow-hidden pt-28 md:pt-40" aria-label="Contact" data-splash="blue" data-music="ending">
         {/* dark cinematic gradient into the final chapter */}
         <div aria-hidden="true" className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-transparent to-navy" />
 
@@ -427,7 +427,7 @@ function ContactForm() {
 function FinalCta() {
   const scrollTo = useScrollTo();
   return (
-    <section id="final-cta" className="relative overflow-hidden py-28 md:py-40" aria-label="Final call to action">
+    <section id="final-cta" className="relative overflow-hidden py-28 md:py-40" aria-label="Final call to action" data-music="ending">
       <div className="hero-glow pointer-events-none absolute inset-0" aria-hidden="true" />
       <div className="relative mx-auto max-w-4xl px-5 text-center md:px-10">
         <Reveal>

@@ -11,7 +11,7 @@ import { Reveal } from './About';
  */
 export function Experience() {
   return (
-    <section id="experience" className="relative py-28 md:py-40" aria-label="Experience" data-splash="blue">
+    <section id="experience" className="relative py-28 md:py-40" aria-label="Experience" data-splash="blue" data-music="tech">
       <div className="mx-auto max-w-7xl px-5 md:px-10">
         <Reveal>
           <p className="kicker text-[10px] text-sun md:text-xs">05 · CAREER</p>
@@ -105,7 +105,7 @@ export function Experience() {
 
 export function Certifications() {
   return (
-    <section id="achievements" className="relative overflow-hidden py-24 md:py-36" aria-label="Certifications and achievements">
+    <section id="achievements" className="relative overflow-hidden py-24 md:py-36" aria-label="Certifications and achievements" data-music="tech">
       <div className="mx-auto max-w-5xl px-5 md:px-10">
         <Reveal>
           <p className="kicker text-center text-[10px] text-baby md:text-xs">PROOF OF WORK</p>

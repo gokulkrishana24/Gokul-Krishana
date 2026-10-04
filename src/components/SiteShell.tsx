@@ -1,6 +1,7 @@
 'use client';
 
 import { SmoothScrollProvider } from '@/lib/lenis';
+import { MusicProvider } from '@/lib/music';
 import { LoadingScreen } from './ui/LoadingScreen';
 import { CustomCursor } from './ui/CustomCursor';
 import { Navbar } from './ui/Navbar';
@@ -30,38 +31,40 @@ export function SiteShell() {
   const resume = useResumeViewer();
 
   return (
-    <SmoothScrollProvider>
-      <LoadingScreen />
-      <CustomCursor />
-      <Navbar />
+    <MusicProvider>
+      <SmoothScrollProvider>
+        <LoadingScreen />
+        <CustomCursor />
+        <Navbar />
 
-      <main>
-        <Hero resume={resume} />
-        <PixelDivider colors={['#5BAEE0', '#FFD34D']} />
-        <About />
-        <CurvedLoop />
-        <JourneyMap />
-        <PixelDivider colors={['#FFD34D', '#FF5C5C']} />
-        <School />
-        <College />
-        <CurvedLoop flip />
-        <TechUniverse />
-        <Marquee />
-        <ConstellationSection />
-        <PixelDivider colors={['#FF5C5C', '#5BAEE0']} />
-        <Projects />
-        <CurvedLoop />
-        <Experience />
-        <Certifications />
-        <Marquee reverse />
-        <BeyondCode />
-        <HowIThink />
-        <Philosophy />
-        <DomeGallery />
-        <Contact resume={resume} />
-      </main>
+        <main>
+          <Hero resume={resume} />
+          <PixelDivider colors={['#5BAEE0', '#FFD34D']} />
+          <About />
+          <CurvedLoop />
+          <JourneyMap />
+          <PixelDivider colors={['#FFD34D', '#FF5C5C']} />
+          <School />
+          <College />
+          <CurvedLoop flip />
+          <TechUniverse />
+          <Marquee />
+          <ConstellationSection />
+          <PixelDivider colors={['#FF5C5C', '#5BAEE0']} />
+          <Projects />
+          <CurvedLoop />
+          <Experience />
+          <Certifications />
+          <Marquee reverse />
+          <BeyondCode />
+          <HowIThink />
+          <Philosophy />
+          <DomeGallery />
+          <Contact resume={resume} />
+        </main>
 
-      <ResumeViewer open={resume.open} onClose={resume.close} />
-    </SmoothScrollProvider>
+        <ResumeViewer open={resume.open} onClose={resume.close} />
+      </SmoothScrollProvider>
+    </MusicProvider>
   );
 }

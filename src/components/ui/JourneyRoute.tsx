@@ -86,7 +86,7 @@ export function JourneyMap() {
     <section
       id="journey-map"
       className="relative overflow-hidden py-24 md:py-32"
-      aria-label="My journey overview"
+      aria-label="My journey overview" data-music="warm"
       data-splash="blue"
     >
       <div className="digital-grid pointer-events-none absolute inset-0 opacity-20" aria-hidden="true" />
