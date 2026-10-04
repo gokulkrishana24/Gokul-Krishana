@@ -33,12 +33,9 @@ import { resumeConfig } from '@/data/content';
  * app, and it is only ever reached from a click handler.
  */
 
-const HERO_KEY = 'gk:hero-complete';
 const DOWNLOAD_KEY = 'gk:resume-downloaded';
 
 type ResumeState = {
-  /** the visitor has seen the hero play through this session */
-  heroCompleted: boolean;
   /** the premium viewer should be open */
   viewOpen: boolean;
   /** the cinematic hero.mp4 loading page should be showing */
@@ -64,8 +61,6 @@ type ResumeState = {
   closeView: () => void;
   /** explicit DOWNLOAD RESUME (behind the hero.mp4 loading page) — the only path to the file */
   download: () => void;
-  /** called by the hero/intro when it finishes playing */
-  completeHero: () => void;
 };
 
 const ResumeContext = createContext<ResumeState | null>(null);
@@ -90,7 +85,6 @@ const PREP_FALLBACK_MS = 6000;
 const PREP_MIN_MS = 1200;
 
 export function ResumeProvider({ children }: { children: ReactNode }) {
-  const [heroCompleted, setHeroCompleted] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [preparing, setPreparing] = useState(false);
   /** which action the hero.mp4 loading page is leading to */
@@ -133,7 +127,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         return null;
       }
     };
-    setHeroCompleted(read(HERO_KEY) === '1');
     setDownloaded(read(DOWNLOAD_KEY) === '1');
 
     return () => {
@@ -151,18 +144,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       /* storage blocked — the choice simply does not persist */
     }
   }, []);
-
-  /**
-   * Called when the hero finishes. Records that the intro has played so a
-   * later DOWNLOAD RESUME never forces the visitor to sit through it again.
-   * Deliberately does nothing else — no navigation, no file access.
-   */
-  const completeHero = useCallback(() => {
-    setHeroCompleted((done) => {
-      if (!done) write(HERO_KEY, '1');
-      return true;
-    });
-  }, [write]);
 
   const closeView = useCallback(() => setViewOpen(false), []);
 
@@ -258,7 +239,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<ResumeState>(
     () => ({
-      heroCompleted,
       viewOpen,
       preparing,
       introFor,
@@ -270,10 +250,8 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       view,
       closeView,
       download,
-      completeHero,
     }),
     [
-      heroCompleted,
       viewOpen,
       preparing,
       introFor,
@@ -284,7 +262,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       view,
       closeView,
       download,
-      completeHero,
     ],
   );
 
