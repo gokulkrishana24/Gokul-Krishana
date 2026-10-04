@@ -30,16 +30,21 @@ export function useIsTouch() {
  * offer an explicit tap-to-open affordance instead.
  */
 export function useIsIOS() {
-  const [ios, setIos] = useState(false);
-
-  useEffect(() => {
-    const nav = window.navigator;
-    const isIOS =
-      /iPad|iPhone|iPod/.test(nav.userAgent) ||
+  // Detected synchronously during the first render, NOT in an effect.
+  //
+  // This matters: the resume viewer must never mount a PDF iframe on iOS,
+  // and an effect-based check resolves to false on the first paint — long
+  // enough for Safari to navigate the frame to the file and take over the
+  // screen. Reading navigator up front means the very first render already
+  // takes the iOS branch, so the iframe is never created at all.
+  const [ios] = useState(() => {
+    if (typeof navigator === 'undefined') return false; // SSR / prerender
+    return (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
       // iPadOS 13+ masquerades as desktop Safari
-      (nav.platform === 'MacIntel' && nav.maxTouchPoints > 1);
-    setIos(isIOS);
-  }, []);
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    );
+  });
 
   return ios;
 }
