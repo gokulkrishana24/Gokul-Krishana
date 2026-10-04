@@ -123,6 +123,8 @@ export function ResumeViewer() {
   const [zoom, setZoom] = useState<ZoomMode>('fit');
   const [tilt, setTilt] = useState({ rx: 0, ry: 0 });
   const [parallax, setParallax] = useState({ x: 0, y: 0 });
+  /** pan offset while the document is zoomed in on touch */
+  const [pan, setPan] = useState({ x: 0, y: 0 });
 
   /* --- open: reset state and remember what had focus --- */
   useEffect(() => {
@@ -132,6 +134,7 @@ export function ResumeViewer() {
     setZoom('fit');
     setTilt({ rx: 0, ry: 0 });
     setParallax({ x: 0, y: 0 });
+    setPan({ x: 0, y: 0 });
 
     // No page counting here any more: PDF.js reports the real page count
     // once the document parses, so the file is fetched exactly once, by
@@ -167,6 +170,90 @@ export function ResumeViewer() {
   }, [open]);
 
   /* --- page and zoom are plain state now: the canvas re-renders from them --- */
+  /**
+   * Touch gestures on the document itself.
+   *
+   *  • one finger, not zoomed  -> horizontal swipe turns the page
+   *  • one finger, zoomed      -> drag pans the document
+   *  • two fingers             -> pinch zooms
+   *
+   * Scoped to the document stage only (which carries touch-none), so the
+   * viewer chrome and the page behind keep their normal behaviour. The
+   * swipe threshold is generous so an accidental brush cannot flip a page.
+   */
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchStartRef = useRef<{ dist: number; zoom: number } | null>(null);
+  const dragRef = useRef<{ x: number; y: number; panX: number; panY: number; moved: boolean } | null>(null);
+
+  /** Desktop tilt parallax and touch gestures share one move handler. */
+  const onStagePointerMove = (e: React.PointerEvent) => {
+    onStageMove(e);
+    onDocPointerMove(e);
+  };
+
+  const onDocPointerDown = (e: React.PointerEvent) => {
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pointersRef.current.size === 2) {
+      const [a, b] = [...pointersRef.current.values()];
+      pinchStartRef.current = { dist: Math.hypot(a.x - b.x, a.y - b.y), zoom: zoom === 'fit' ? 100 : zoom };
+      dragRef.current = null;
+      return;
+    }
+
+    dragRef.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y, moved: false };
+  };
+
+  const onDocPointerMove = (e: React.PointerEvent) => {
+    if (!pointersRef.current.has(e.pointerId)) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // pinch
+    const start = pinchStartRef.current;
+    if (start && pointersRef.current.size === 2) {
+      const [a, b] = [...pointersRef.current.values()];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      if (start.dist > 0) {
+        const target = (start.zoom * dist) / start.dist;
+        // snap to the nearest defined zoom step
+        let best = 100;
+        for (const z of ZOOM_STEPS) {
+          if (typeof z === 'number' && Math.abs(z - target) < Math.abs(best - target)) best = z;
+        }
+        setZoomMode(best);
+      }
+      return;
+    }
+
+    const d = dragRef.current;
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (Math.abs(dx) > 6 || Math.abs(dy) > 6) d.moved = true;
+
+    if (zoom !== 'fit') {
+      // panning only makes sense once the page is larger than the stage
+      setPan({ x: d.panX + dx, y: d.panY + dy });
+    }
+  };
+
+  const onDocPointerUp = (e: React.PointerEvent) => {
+    pointersRef.current.delete(e.pointerId);
+    if (pointersRef.current.size < 2) pinchStartRef.current = null;
+
+    const d = dragRef.current;
+    dragRef.current = null;
+    if (!d || e.type === 'pointercancel') return;
+
+    // horizontal swipe turns the page, but only when not panning a zoomed doc
+    if (zoom === 'fit' && d.moved) {
+      const dx = e.clientX - d.x;
+      const dy = e.clientY - d.y;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+        goToPage(page + (dx < 0 ? 1 : -1));
+      }
+    }
+  };
   const goToPage = useCallback(
     (next: number) => {
       setPage(Math.min(Math.max(1, next), Math.max(pages, 1)));
@@ -174,7 +261,11 @@ export function ResumeViewer() {
     [pages],
   );
 
-  const setZoomMode = useCallback((next: ZoomMode) => setZoom(next), []);
+  const setZoomMode = useCallback((next: ZoomMode) => {
+    setZoom(next);
+    // Any zoom change invalidates a pan taken at the previous size.
+    if (next === 'fit') setPan({ x: 0, y: 0 });
+  }, []);
 
   const stepZoom = useCallback(
     (direction: 1 | -1) => {
@@ -189,6 +280,7 @@ export function ResumeViewer() {
     setZoom('fit');
     setTilt({ rx: 0, ry: 0 });
     setParallax({ x: 0, y: 0 });
+    setPan({ x: 0, y: 0 });
     setPage(1);
   }, []);
 
@@ -298,7 +390,7 @@ export function ResumeViewer() {
 
   return (
     <div
-      className="fixed inset-0 z-[90] flex flex-col bg-navy"
+      className="fixed inset-0 z-[90] flex flex-col overflow-y-auto overscroll-contain bg-navy"
       role="dialog"
       aria-modal="true"
       aria-label="Resume viewer"
@@ -393,7 +485,7 @@ export function ResumeViewer() {
           ref={closeRef}
           onClick={onClose}
           data-cursor="CLOSE"
-          className="inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-2.5 font-display text-[10px] font-bold tracking-[0.18em] text-white transition-all duration-300 hover:border-accent-red hover:text-accent-red"
+          className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/20 px-5 py-2.5 font-display text-[10px] font-bold tracking-[0.18em] text-white transition-all duration-300 hover:border-accent-red hover:text-accent-red"
         >
           CLOSE <span aria-hidden="true">✕</span>
         </button>
@@ -402,9 +494,12 @@ export function ResumeViewer() {
       {/* ---------------- the document ---------------- */}
       <div
         ref={stageRef}
-        onPointerMove={onStageMove}
+        onPointerMove={onStagePointerMove}
         onPointerLeave={onStageLeave}
-        className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-4 pb-2 md:px-10"
+        onPointerDown={onDocPointerDown}
+        onPointerUp={onDocPointerUp}
+        onPointerCancel={onDocPointerUp}
+        className="relative z-10 flex min-h-0 flex-1 touch-none items-center justify-center overflow-hidden px-4 pb-2 md:px-10"
         style={{ perspective: '1600px' }}
       >
         <div
@@ -413,7 +508,7 @@ export function ResumeViewer() {
             height: 'min(72svh, 860px)',
             aspectRatio: '1 / 1.414',
             maxWidth: '100%',
-            transform: `rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg) translate3d(${parallax.x}px, ${parallax.y}px, 0)`,
+            transform: `rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg) translate3d(${parallax.x}px, ${parallax.y}px, 0) translate3d(${pan.x}px, ${pan.y}px, 0)`,
             transformStyle: 'preserve-3d',
           }}
         >
@@ -508,7 +603,7 @@ export function ResumeViewer() {
             download={resumeConfig.pdfName}
             rel="noopener"
             data-cursor="DOWNLOAD"
-            className="inline-flex items-center gap-2 rounded-full bg-baby px-6 py-3 font-display text-[10px] font-bold tracking-[0.18em] text-navy transition-all duration-300 hover:bg-sun active:scale-[0.98]"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-baby px-6 py-3 font-display text-[10px] font-bold tracking-[0.18em] text-navy transition-all duration-300 hover:bg-sun active:scale-[0.98]"
           >
             DOWNLOAD PDF
           </a>
@@ -541,7 +636,7 @@ function Control({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-4 py-2.5 font-display text-[10px] font-bold tracking-[0.16em] text-slate-200 transition-all duration-300 hover:border-baby hover:text-baby disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-white/15 disabled:hover:text-slate-200"
+      className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded-full border border-white/15 px-4 py-2.5 font-display text-[10px] font-bold tracking-[0.16em] text-slate-200 transition-all duration-300 hover:border-baby hover:text-baby disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-white/15 disabled:hover:text-slate-200"
       {...rest}
     >
       {children}
