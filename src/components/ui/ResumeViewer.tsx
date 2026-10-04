@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { profile, resumeConfig } from '@/data/content';
-import { useIsIOS, useReducedMotion } from '@/lib/useIsTouch';
+import { useReducedMotion } from '@/lib/useIsTouch';
 import { useResume } from '@/lib/resume';
 import { BackgroundVideo } from './BackgroundVideo';
+import { ResumeDocument } from './ResumeDocument';
 
 /**
  * RESUME VIEWER — the immersive viewer behind "VIEW / DOWNLOAD RESUME".
@@ -117,15 +118,13 @@ export function ResumeViewer() {
    * labelled tap-to-open panel instead. Nothing is ever fetched or opened
    * without that tap.
    */
-  const ios = useIsIOS();
-  const [iosDocOpen, setIosDocOpen] = useState(false);
   const [pages, setPages] = useState(1);
   const [page, setPage] = useState(1);
   const [zoom, setZoom] = useState<ZoomMode>('fit');
   const [tilt, setTilt] = useState({ rx: 0, ry: 0 });
   const [parallax, setParallax] = useState({ x: 0, y: 0 });
 
-  /* --- open: reset state, count pages, remember what had focus --- */
+  /* --- open: reset state and remember what had focus --- */
   useEffect(() => {
     if (!open) return;
     openerRef.current = document.activeElement as HTMLElement | null;
@@ -133,35 +132,13 @@ export function ResumeViewer() {
     setZoom('fit');
     setTilt({ rx: 0, ry: 0 });
     setParallax({ x: 0, y: 0 });
-    // On iOS the document is never mounted, so there is nothing to paginate
-    // and no reason to fetch the file at all.
-    setIosDocOpen(false);
 
-    let cancelled = false;
-    if (!ios) (async () => {
-      try {
-        const res = await fetch(resumeConfig.pdf);
-        if (!res.ok) return;
-        const text = new TextDecoder('latin1').decode(await res.arrayBuffer());
-        // Page objects are authoritative; /Count is only a fallback for
-        // PDFs whose page tree uses compressed object streams.
-        const objects = text.match(/\/Type\s*\/Page[^s]/g)?.length ?? 0;
-        const counts = [...text.matchAll(/\/Count\s+(\d+)/g)]
-          .map((m) => Number(m[1]))
-          .filter((n) => n > 0 && n < 50);
-        const found = objects || (counts.length ? Math.min(...counts) : 0);
-        if (!cancelled && found > 0) setPages(found);
-      } catch {
-        // A page count is a nicety; the viewer works fine without it.
-      }
-    })();
-
+    // No page counting here any more: PDF.js reports the real page count
+    // once the document parses, so the file is fetched exactly once, by
+    // the renderer that actually needs it.
     const focusTimer = window.setTimeout(() => closeRef.current?.focus(), 60);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(focusTimer);
-    };
-  }, [open, ios]);
+    return () => window.clearTimeout(focusTimer);
+  }, [open]);
 
   /* --- scroll lock while the viewer owns the screen --- */
   useEffect(() => {
@@ -189,38 +166,15 @@ export function ResumeViewer() {
     openerRef.current = null;
   }, [open]);
 
-  /* --- drive the embedded PDF viewer through its URL fragment --- */
-  const applyHash = useCallback((nextPage: number, nextZoom: ZoomMode) => {
-    const view = frameRef.current?.contentWindow;
-    if (!view) return;
-    const parts = [`page=${nextPage}`];
-    if (nextZoom === 'fit') parts.push('view=FitH');
-    else parts.push(`zoom=${nextZoom}`);
-    try {
-      // Same-origin PDF, so this is allowed. Guarded anyway: if a future
-      // change moved the file off-origin the viewer must not throw.
-      view.location.hash = parts.join('&');
-    } catch {
-      /* the embedded viewer simply keeps its own state */
-    }
-  }, []);
-
+  /* --- page and zoom are plain state now: the canvas re-renders from them --- */
   const goToPage = useCallback(
-    (next: number, nextZoom: ZoomMode = zoom) => {
-      const clamped = Math.min(Math.max(1, next), Math.max(pages, 1));
-      setPage(clamped);
-      applyHash(clamped, nextZoom);
+    (next: number) => {
+      setPage(Math.min(Math.max(1, next), Math.max(pages, 1)));
     },
-    [applyHash, pages, zoom],
+    [pages],
   );
 
-  const setZoomMode = useCallback(
-    (next: ZoomMode) => {
-      setZoom(next);
-      applyHash(page, next);
-    },
-    [applyHash, page],
-  );
+  const setZoomMode = useCallback((next: ZoomMode) => setZoom(next), []);
 
   const stepZoom = useCallback(
     (direction: 1 | -1) => {
@@ -235,9 +189,30 @@ export function ResumeViewer() {
     setZoom('fit');
     setTilt({ rx: 0, ry: 0 });
     setParallax({ x: 0, y: 0 });
-    applyHash(1, 'fit');
     setPage(1);
-  }, [applyHash]);
+  }, []);
+
+  /**
+   * Fit-to-height scale for the canvas: how much to shrink the natural
+   * A4 page so it fits the stage. Recomputed on resize so rotating a
+   * phone reflows the document instead of leaving it clipped.
+   */
+  const [fitScale, setFitScale] = useState(1);
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const measure = () => {
+      const h = el.clientHeight;
+      const w = el.clientWidth;
+      if (h <= 0 || w <= 0) return;
+      // natural A4 page is 595 x 842pt
+      setFitScale(Math.min((h * 0.92) / 842, (w * 0.96) / 595));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [open]);
 
   /* --- pointer tilt (desktop) --- */
   const onStageMove = (e: React.PointerEvent) => {
@@ -320,94 +295,6 @@ export function ResumeViewer() {
   const scroll = (tilt.rx + 90) / 180; // 0..1 → where the reflection sits
 
   if (!open) return null;
-
-  /* ------------------------------------------------------------------ */
-  /* iOS: no iframe — the native viewer is the only option, so it has to  */
-  /* be a deliberate, labelled tap rather than something that just fires.  */
-  /* ------------------------------------------------------------------ */
-  if (ios) {
-    return (
-      <div
-        className="fixed inset-0 z-[90] flex flex-col overflow-y-auto bg-navy"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Resume viewer"
-      >
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-navy" />
-          <div
-            className="animate-ambient absolute -inset-1/4"
-            style={{
-              background:
-                'radial-gradient(ellipse 45% 40% at 50% 45%, rgba(91,174,224,0.20), transparent 70%)',
-            }}
-          />
-          <div className="digital-grid absolute inset-0 opacity-30" />
-        </div>
-
-        <div className="relative z-10 mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-7 px-6 py-16 text-center">
-          <p className="kicker text-[10px] text-baby-dim">YOUR RESUME</p>
-          <h2 className="headline text-3xl font-bold text-white sm:text-4xl">GOKUL KRISHANA</h2>
-          <p className="max-w-md text-sm leading-relaxed text-slate-400">
-            On iOS, resumes open in the built-in PDF viewer. Nothing is loaded
-            until you choose to open it.
-          </p>
-
-          {!iosDocOpen ? (
-            <button
-              type="button"
-              onClick={() => setIosDocOpen(true)}
-              className="group inline-flex items-center gap-3 rounded-full bg-baby px-8 py-4 font-display text-xs font-bold tracking-[0.18em] text-navy transition-all duration-300 hover:bg-sun active:scale-[0.98]"
-              data-cursor="ENTER"
-            >
-              OPEN RESUME
-              <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1">→</span>
-            </button>
-          ) : (
-            <div className="flex w-full flex-col items-center gap-3">
-              <a
-                href={resumeConfig.pdf}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group inline-flex w-full max-w-sm items-center justify-center gap-3 rounded-full bg-baby px-8 py-4 font-display text-xs font-bold tracking-[0.18em] text-navy transition-all duration-300 hover:bg-sun active:scale-[0.98]"
-                data-cursor="ENTER"
-              >
-                OPEN IN PDF VIEWER
-                <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1">→</span>
-              </a>
-              <a
-                href={resumeConfig.pdf}
-                download={resumeConfig.pdfName}
-                rel="noopener"
-                className="inline-flex items-center gap-2 rounded-full border border-white/20 px-7 py-3.5 font-display text-[10px] font-bold tracking-[0.18em] text-white transition-all duration-300 hover:border-sun hover:text-sun active:scale-[0.98]"
-                data-cursor="DOWNLOAD"
-              >
-                DOWNLOAD PDF
-              </a>
-              <button
-                type="button"
-                onClick={onClose}
-                className="mt-2 text-xs text-slate-500 underline underline-offset-4 hover:text-slate-300"
-              >
-                Never mind
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="relative z-10 flex justify-center pb-8">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-white/15 px-6 py-3 font-display text-[10px] font-bold tracking-[0.18em] text-white/80 transition-colors hover:border-white/40 hover:text-white"
-            data-cursor="EXIT"
-          >
-            ← CLOSE
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -540,13 +427,17 @@ export function ResumeViewer() {
             }}
           />
 
-          {/* the actual PDF — mounted only because the visitor asked for it */}
-          <iframe
-            ref={frameRef}
-            src={`${resumeConfig.pdf}#page=1&view=FitH`}
-            title="Gokul Krishana — resume"
-            loading="lazy"
-            className="h-full w-full rounded-xl border border-white/15 bg-white"
+          {/* the actual PDF — real pages drawn to a canvas by PDF.js, mounted
+              only because the visitor asked for it. An iframe was used
+              here before and rendered a blank document on any browser
+              that would not display a PDF in a frame (iOS Safari
+              always, plus various mobile builds). */}
+          <ResumeDocument
+            file={resumeConfig.pdf}
+            page={page}
+            numPages={pages}
+            onLoaded={setPages}
+            scale={zoom === 'fit' ? fitScale : zoom / 100}
           />
 
           {/* reflection that slides as the sheet tilts */}
