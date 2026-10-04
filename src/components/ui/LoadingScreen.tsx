@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { profile, resumeConfig } from '@/data/content';
+import { useResume } from '@/lib/resume';
 
 /**
  * CINEMATIC INTRO — hero.mp4 plays BEFORE the portfolio is usable.
@@ -31,14 +32,19 @@ type Phase = 'play' | 'out' | 'gone';
 
 export function LoadingScreen() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { completeHero } = useResume();
   const [phase, setPhase] = useState<Phase>('play');
   const [progress, setProgress] = useState(0);
   const [videoOk, setVideoOk] = useState(true);
 
-  const finish = () => {
+  const finish = useCallback(() => {
+    // Records that the hero has played through, so a later explicit
+    // DOWNLOAD RESUME never makes anyone sit through it again. It touches
+    // nothing but a session flag — no file is fetched, opened or moved.
+    completeHero();
     setPhase((p) => (p === 'gone' ? p : 'out'));
     window.setTimeout(() => setPhase('gone'), 850);
-  };
+  }, [completeHero]);
 
   useEffect(() => {
     // scroll lock for the duration of the intro
@@ -76,7 +82,7 @@ export function LoadingScreen() {
       v?.pause();
       document.body.style.overflow = prev;
     };
-  }, []);
+  }, [finish]);
 
   if (phase === 'gone') return null;
 

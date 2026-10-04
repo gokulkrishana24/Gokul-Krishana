@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { projects, type Project } from '@/data/content';
 import { Reveal } from './About';
+import { ProjectCaseStudy } from './ProjectCaseStudy';
 
 /**
  * PROJECTS — SELECTED WORK. Large editorial presentations, no tiny
@@ -13,6 +14,9 @@ import { Reveal } from './About';
  * arrow movement, VIEW cursor. Touch: subtle depth response.
  */
 export function Projects() {
+  /** id of the case study currently open, or null */
+  const [openId, setOpenId] = useState<string | null>(null);
+
   return (
     <section id="projects" className="relative py-28 md:py-40" aria-label="Selected work" data-splash="blue" data-music="tech">
       <div className="mx-auto max-w-7xl px-5 md:px-10">
@@ -27,15 +31,29 @@ export function Projects() {
 
         <div className="mt-20 space-y-28 md:space-y-36">
           {projects.map((p) => (
-            <ProjectRow key={p.id} project={p} />
+            <ProjectRow key={p.id} project={p} onOpenCaseStudy={() => setOpenId(p.id)} />
           ))}
         </div>
       </div>
+
+      {/* the interactive case study — an overlay, so the page behind it
+          never reloads and keeps its scroll position */}
+      <ProjectCaseStudy
+        openId={openId}
+        onClose={() => setOpenId(null)}
+        onNavigate={(id) => setOpenId(id)}
+      />
     </section>
   );
 }
 
-function ProjectRow({ project: p }: { project: Project }) {
+function ProjectRow({
+  project: p,
+  onOpenCaseStudy,
+}: {
+  project: Project;
+  onOpenCaseStudy: () => void;
+}) {
   const [hovered, setHovered] = useState(false);
   const hero = Boolean(p.hero);
   /** two projects score differently: AI lifts the tech atmosphere,
@@ -135,16 +153,15 @@ function ProjectRow({ project: p }: { project: Project }) {
 
         {p.viewProject && (
           <Reveal delay={0.22}>
-            <a
-              href={p.github}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={onOpenCaseStudy}
               className="group/link mt-8 inline-flex items-center gap-2.5 font-display text-xs font-bold tracking-[0.2em] text-baby transition-colors hover:text-sun"
               data-cursor="ENTER"
             >
               VIEW PROJECT
               <span aria-hidden="true" className="transition-transform duration-300 group-hover/link:translate-x-1.5">→</span>
-            </a>
+            </button>
           </Reveal>
         )}
 

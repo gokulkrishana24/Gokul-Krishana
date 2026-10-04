@@ -1,9 +1,10 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { beyond, domeGallery, mindset, profile } from '@/data/content';
 import { useReducedMotion } from '@/lib/useIsTouch';
+import type { SocialEntry } from '@/lib/socialFeed';
 import { Reveal } from './About';
 
 /**
@@ -217,6 +218,35 @@ export function DomeGallery() {
     dragState.current = null;
   };
 
+  /**
+   * Social highlights, fetched from the server-side route.
+   *
+   * Nothing is scraped and no token ever reaches the browser: the route
+   * returns curated, already-sanitised entries. If the request fails the
+   * section simply omits the strip rather than showing an error.
+   */
+  const [social, setSocial] = useState<SocialEntry[]>([]);
+  const [socialLive, setSocialLive] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/social-feed');
+        if (!res.ok) return;
+        const data = (await res.json()) as { entries?: SocialEntry[]; live?: boolean };
+        if (cancelled) return;
+        setSocial(Array.isArray(data.entries) ? data.entries : []);
+        setSocialLive(Boolean(data.live));
+      } catch {
+        /* offline or blocked — the gallery above still stands on its own */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <section className="relative overflow-hidden py-24 md:py-32" aria-label="Gallery of journey moments">
       <div className="mx-auto max-w-6xl px-5 md:px-10">
@@ -307,6 +337,49 @@ export function DomeGallery() {
           </div>
         </div>
       </Reveal>
+
+      {/* Curated social highlights, served by /api/social-feed. Labelled
+          honestly: curated until a real server-side integration exists. */}
+      {social.length > 0 && (
+        <Reveal delay={0.14}>
+          <div className="mx-auto mt-14 max-w-5xl px-5 md:px-10">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <p className="kicker text-[9px] text-baby-dim">SELECTED HIGHLIGHTS</p>
+              <p className="kicker text-[8px] text-slate-600">
+                {socialLive ? 'SYNCED FROM THE PROFILES' : 'CURATED — LINKS OUT, NOT SCRAPED'}
+              </p>
+            </div>
+
+            <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {social.map((entry) => (
+                <li key={entry.id}>
+                  <a
+                    href={entry.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-cursor="EXPLORE"
+                    className="group flex h-full flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition-colors duration-300 hover:border-baby/40"
+                  >
+                    <span className="kicker text-[8px] text-slate-500">
+                      {entry.network === 'instagram' ? 'INSTAGRAM' : 'LINKEDIN'}
+                      {entry.date ? ` · ${entry.date}` : ''}
+                    </span>
+                    <span className="mt-2 font-display text-[11px] font-bold tracking-[0.14em] text-white">
+                      {entry.title}
+                    </span>
+                    <span className="mt-2 flex-1 text-[11px] leading-relaxed text-slate-400">
+                      {entry.caption}
+                    </span>
+                    <span className="mt-4 font-display text-[9px] font-bold tracking-[0.18em] text-baby transition-colors group-hover:text-sun">
+                      VIEW →
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Reveal>
+      )}
     </section>
   );
 }

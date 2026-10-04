@@ -5,7 +5,7 @@ import { contact, profile } from '@/data/content';
 import { LIMITS, PROJECT_TYPES, validateContact, type FieldErrors } from '@/lib/contact';
 import { useScrollTo } from '@/lib/lenis';
 import { Reveal } from './About';
-import type { useResumeViewer } from './ResumeViewer';
+import { useResume } from '@/lib/resume';
 
 /**
  * CONTACT — dark cinematic transition into a subtle terminal
@@ -14,10 +14,12 @@ import type { useResumeViewer } from './ResumeViewer';
  * DOWNLOAD RESUME), a contact form with an honest mailto fallback,
  * then FINAL CTA and FOOTER.
  *
- * The resume button opens the shared viewer mounted by SiteShell —
- * opening it never downloads the file.
+ * The resume buttons use the one controlled resume flow: VIEW opens the
+ * shared viewer (never downloads), DOWNLOAD runs the preparation
+ * overlay and is the only path that ever touches the file.
  */
-export function Contact({ resume }: { resume: ReturnType<typeof useResumeViewer> }) {
+export function Contact() {
+  const resume = useResume();
   return (
     <>
       <section id="contact" className="relative overflow-hidden pt-28 md:pt-40" aria-label="Contact" data-splash="blue" data-music="ending">
@@ -96,11 +98,18 @@ export function Contact({ resume }: { resume: ReturnType<typeof useResumeViewer>
                 CONNECT ON LINKEDIN
               </a>
               <button
-                onClick={resume.show}
+                onClick={resume.view}
                 data-cursor="OPEN"
                 className="rounded-full bg-baby px-7 py-3.5 font-display text-xs font-bold tracking-[0.18em] text-navy transition-all duration-300 hover:bg-sun"
               >
-                VIEW / DOWNLOAD RESUME
+                VIEW RESUME
+              </button>
+              <button
+                onClick={resume.download}
+                data-cursor="DOWNLOAD"
+                className="rounded-full border border-sun/50 px-7 py-3.5 font-display text-xs font-bold tracking-[0.18em] text-sun transition-all duration-300 hover:bg-sun hover:text-navy"
+              >
+                DOWNLOAD RESUME
               </button>
             </div>
           </Reveal>

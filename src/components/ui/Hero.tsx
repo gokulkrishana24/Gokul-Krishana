@@ -5,8 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { about, profile } from '@/data/content';
 import { useScrollTo } from '@/lib/lenis';
 import { useReducedMotion } from '@/lib/useIsTouch';
+import { useResume } from '@/lib/resume';
 import { BackgroundVideo } from './BackgroundVideo';
-import type { useResumeViewer } from './ResumeViewer';
 
 /**
  * HERO — full-screen cinematic opening. Giant name typography beside
@@ -18,7 +18,8 @@ import type { useResumeViewer } from './ResumeViewer';
 const MAX_RX = 3; // deg — never more, face must stay stable
 const MAX_RY = 5; // deg
 
-export function Hero({ resume }: { resume: ReturnType<typeof useResumeViewer> }) {
+export function Hero() {
+  const resume = useResume();
   const sectionRef = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
   const scrollTo = useScrollTo();
@@ -111,14 +112,24 @@ export function Hero({ resume }: { resume: ReturnType<typeof useResumeViewer> })
               <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1">→</span>
             </button>
             <button
-              onClick={resume.show}
+              onClick={resume.view}
               className="group inline-flex items-center gap-3 rounded-full border border-white/20 px-7 py-3.5 font-display text-xs font-bold tracking-[0.18em] text-white transition-all duration-300 hover:border-baby hover:text-baby active:scale-[0.98]"
               data-cursor="ENTER"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true" className="transition-transform duration-300 group-hover:translate-y-0.5">
                 <path d="M4 4h9a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4zM20 4h-1a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h2z" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              VIEW / DOWNLOAD RESUME
+              VIEW RESUME
+            </button>
+            <button
+              onClick={resume.download}
+              className="group inline-flex items-center gap-3 rounded-full border border-sun/50 px-7 py-3.5 font-display text-xs font-bold tracking-[0.18em] text-sun transition-all duration-300 hover:bg-sun hover:text-navy active:scale-[0.98]"
+              data-cursor="DOWNLOAD"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true" className="transition-transform duration-300 group-hover:translate-y-0.5">
+                <path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              DOWNLOAD RESUME
             </button>
             <button
               onClick={() => scrollTo('contact')}
