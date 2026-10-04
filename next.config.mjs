@@ -129,6 +129,13 @@ const nextConfig = {
         source: '/resume/:path*',
         headers: [
           { key: 'Content-Security-Policy', value: cspEmbeddable },
+          // The global '/(.*)' rule also emits X-Frame-Options: DENY, and
+          // Next merges both rules rather than replacing. A DENY here
+          // still makes the browser refuse to render the PDF in the
+          // viewer's iframe, so it is explicitly relaxed to SAMEORIGIN
+          // for this path. SAMEORIGIN (rather than removing it) keeps
+          // framing restricted to this site, which is all the viewer is.
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           {
