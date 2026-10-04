@@ -197,14 +197,17 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   /** Point a slot at `cue`, wiring media → filter → gain on first use. */
   const load = useCallback(
     (slot: Slot, next: CueId) => {
-      if (slot.cue === next) return;
       // Reclaiming a slot cancels its pending unload, so a rapid second
-      // crossfade cannot have the first one silence the live cue.
+      // crossfade cannot have the first one silence the live cue. This runs
+      // BEFORE the early return below: a slot can be reclaimed still holding
+      // the very cue it is being asked to play again, and its stale timer
+      // would otherwise fire against the cue that is now audible.
       if (slot.retireTimer !== null) {
         window.clearTimeout(slot.retireTimer);
         releasedRef.current = releasedRef.current.filter((id) => id !== slot.retireTimer);
         slot.retireTimer = null;
       }
+      if (slot.cue === next) return;
       const ctx = ensureContext();
       slot.el.pause();
       slot.el.src = `/audio/${next}.mp3`;
