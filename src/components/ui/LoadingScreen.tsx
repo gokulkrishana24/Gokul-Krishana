@@ -43,20 +43,13 @@ export function LoadingScreen() {
   }, []);
 
   useEffect(() => {
-    // scroll lock for the duration of the intro
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const v = videoRef.current;
     if (reduced) {
       // No cinema for visitors who asked for less motion — a beat, then in.
       const quick = window.setTimeout(finish, MIN_MS);
-      return () => {
-        window.clearTimeout(quick);
-        document.body.style.overflow = prev;
-      };
+      return () => window.clearTimeout(quick);
     }
 
     const play = () => v?.play().catch(() => setVideoOk(false));
@@ -76,9 +69,29 @@ export function LoadingScreen() {
       window.clearTimeout(hold);
       window.removeEventListener('loadeddata', play);
       v?.pause();
-      document.body.style.overflow = prev;
     };
   }, [finish]);
+
+  /**
+   * Scroll lock, tied to `phase` rather than to mount.
+   *
+   * The intro ends by rendering `null`, which does NOT unmount this
+   * component — so a lock held in the effect above would never be
+   * released and `document.body.style.overflow` would stay 'hidden'
+   * forever, leaving the whole portfolio unscrollable (most visibly on
+   * touch devices, where native scrolling is what body overflow gates).
+   *
+   * Re-running on `phase` means the lock is taken while the intro is on
+   * screen and dropped the moment it is gone.
+   */
+  useEffect(() => {
+    if (phase === 'gone') return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [phase]);
 
   if (phase === 'gone') return null;
 
